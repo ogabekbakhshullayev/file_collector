@@ -10,8 +10,6 @@ RUN pip install --upgrade pip && \
 
 COPY ./app/ ./
 
-COPY ./images/ /images/
-
 ENV PYTHONPATH "${PYTHONPATH}:/app"
 
 EXPOSE 8080

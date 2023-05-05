@@ -25,6 +25,7 @@ async def predict(data_input: InputData):
 
         with open(f"{folder_name}/second_image.jpg", "wb") as f:
             f.write(base64.b64decode(data_input.second_image))
+
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Exception: {err}")
 
