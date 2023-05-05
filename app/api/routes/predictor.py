@@ -13,25 +13,23 @@ router = APIRouter()
 async def predict(data_input: InputData):
     if not data_input:
         raise HTTPException(status_code=404, detail="'data_input' argument invalid!")
-
-    folder_name = f"/app/images/{str(uuid4())}"
-    print(folder_name)
+    file_id = str(uuid4())
+    folder_name = f"/images/{file_id}"
 
     try:
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
 
-        with open(f"{folder_name}/image_1.jpg", "wb") as f:
+        with open(f"{folder_name}/first_image.jpg", "wb") as f:
             f.write(base64.b64decode(data_input.first_image))
 
-        with open(f"{folder_name}/image_2.jpg", "wb") as f:
+        with open(f"{folder_name}/second_image.jpg", "wb") as f:
             f.write(base64.b64decode(data_input.second_image))
-
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Exception: {err}")
 
     return ResponseData(
         status_code=200,
-        file_id=folder_name,
+        file_id=file_id,
         detail="File saved successfully!",
     )
