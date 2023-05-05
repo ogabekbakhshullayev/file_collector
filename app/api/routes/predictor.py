@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Body
 
 from models.prediction import ResponseData
 import aiofiles
@@ -14,7 +14,7 @@ router = APIRouter()
 async def predict(
     captured_image: Annotated[UploadFile, "image/jpg"] = File(...),
     json_depth_data: Annotated[UploadFile, "application/json"] = File(...),
-    is_real: bool = True,
+    is_real: Annotated[bool, Form()] = Body(...),
 ):
     if not json_depth_data or not captured_image:
         raise HTTPException(status_code=404, detail="Files not found!")
