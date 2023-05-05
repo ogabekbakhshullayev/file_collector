@@ -1,11 +1,13 @@
-from typing import Any
+from typing import Annotated
 
 from pydantic import BaseModel
+from fastapi import UploadFile
 
 
 class InputData(BaseModel):
-    first_image: str
-    second_image: str
+    captured_image: Annotated[UploadFile, "image/jpg"]
+    json_depth_data: Annotated[UploadFile, "application/json"]
+    is_real: bool = True
 
 
 class ResponseData(BaseModel):
