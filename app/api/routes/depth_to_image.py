@@ -13,8 +13,6 @@ router = APIRouter()
 @router.post("/depth-to-image", response_class=StreamingResponse)
 async def depth_to_image(
     json_depth_data: Annotated[UploadFile, "application/json"] = File(...),
-    width: Annotated[int, "width of the image"] = Body(default=640),
-    height: Annotated[int, "height of the image"] = Body(default=480),
 ):
     if not json_depth_data:
         raise HTTPException(status_code=404, detail="Files not found!")
@@ -22,6 +20,8 @@ async def depth_to_image(
     try:
         content = await json_depth_data.read()
         depth_data = np.array(json.loads(content).get("pixels"))
+        height = json.loads(content).get("height")
+        width = json.loads(content).get("width")
 
         depth_data = depth_data.reshape((height, width))
         depth_image = depth_data.astype(np.uint8)
