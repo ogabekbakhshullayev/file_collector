@@ -21,7 +21,7 @@ async def depth_to_image(
 
     try:
         content = await json_depth_data.read()
-        depth_data = np.array(json.loads(content).get("distance"))
+        depth_data = np.array(json.loads(content).get("pixels"))
 
         depth_data = depth_data.reshape((height, width))
         depth_image = depth_data.astype(np.uint8)
