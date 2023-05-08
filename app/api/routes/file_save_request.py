@@ -14,6 +14,7 @@ router = APIRouter()
 async def predict(
     captured_image: Annotated[UploadFile, "image/jpg"] = File(...),
     json_depth_data: Annotated[UploadFile, "application/json"] = File(...),
+    model_name: Annotated[str, Form()] = Body(...),
     is_real: Annotated[bool, Form()] = Body(...),
 ):
     if not json_depth_data or not captured_image:
@@ -21,7 +22,7 @@ async def predict(
 
     base_path = "real" if is_real else "spoof"
     file_id = str(uuid4())
-    folder_name = f"/images/{base_path}/{file_id}"
+    folder_name = f"/images/{base_path}/{model_name}_{file_id}"
 
     try:
         if not os.path.exists(folder_name):

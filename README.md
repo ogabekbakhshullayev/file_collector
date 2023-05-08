@@ -17,7 +17,7 @@ MODEL_NAME=model.pkl
 
 ### Update `/predict`
 
-To update your machine learning model, add your `load` and `method` [change here](app/api/routes/saver.py#L19) at `predictor.py`
+To update your machine learning model, add your `load` and `method` [change here](app/api/routes/file_save_request.py#L19) at `predictor.py`
 
 ## Installation
 
