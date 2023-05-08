@@ -1,12 +1,14 @@
-FROM python:3.11.3
+FROM python:3.10
 
 ENV PYTHONUNBUFFERED 1
 
-WORKDIR /app
+RUN apt-get update -y && apt-get install libgl1 -y
 
+
+WORKDIR /app
 COPY ./requirements.txt ./
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
 COPY ./app/ ./
 

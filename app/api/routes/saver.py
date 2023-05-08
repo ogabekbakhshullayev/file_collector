@@ -27,7 +27,9 @@ async def predict(
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
 
-        async with aiofiles.open(f"{folder_name}/json_depth_data.json", "wb") as out_file:
+        async with aiofiles.open(
+            f"{folder_name}/json_depth_data.json", "wb"
+        ) as out_file:
             content = await json_depth_data.read()
             await out_file.write(content)
 
