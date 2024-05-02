@@ -13,3 +13,10 @@ class ResponseData(BaseModel):
     status_code: int
     file_id: str
     detail: str
+
+
+class NearFarFacemeshSaveRequest(BaseModel):
+    near_image: Annotated[UploadFile, "image/jpg"] = File(...)
+    far_image: Annotated[UploadFile, "image/jpg"] = File(...)
+    facemesh: Annotated[UploadFile, "application/json"] = File(...)
+    file_id: str
