@@ -70,5 +70,5 @@ async def predict(
     return ResponseData(
         status_code=200,
         file_id=file_id,
-        message="Near image, far image, facemesh and video saved successfully!"
+        detail="Near image, far image, facemesh and video saved successfully!"
     )
