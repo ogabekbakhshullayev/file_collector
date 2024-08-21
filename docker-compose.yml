@@ -13,3 +13,4 @@ services:
     volumes:
       - ./app:/app/
       - ./images/:/images/
+      - ./images-and-videos/:/images-and-videos/
