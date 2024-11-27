@@ -93,3 +93,5 @@ target/
 *.png
 *.jpg
 *.json
+
+facepay-data/*

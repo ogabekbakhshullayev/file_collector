@@ -1,6 +1,6 @@
 from fastapi import UploadFile, File
 from pydantic import BaseModel
-from typing import Annotated, Any
+from typing import Annotated
 
 
 class FileCollectorInput(BaseModel):

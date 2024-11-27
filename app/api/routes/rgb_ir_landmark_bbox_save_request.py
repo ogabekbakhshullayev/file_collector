@@ -1,10 +1,9 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Body
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form
 
 from models.prediction import ResponseData
 import aiofiles
 from typing import Annotated
 
-from uuid import uuid4
 import os
 
 router = APIRouter()
@@ -15,9 +14,9 @@ facepay_data_dir = "/facepay-data"
 async def predict(
     rgb_image: Annotated[UploadFile, File(...)],
     ir_image: Annotated[UploadFile, File(...)],
-    result: Annotated[UploadFile, Form(...)],
-    status: Annotated[str, Form(...)],
-    file_id: Annotated[str, Form(...)],
+    result: str = Form(...),
+    status: str = Form(...),
+    file_id: str = Form(...),
 ):
     if not rgb_image or not ir_image or not result:
         raise HTTPException(status_code=404, detail="Files not found!")
@@ -48,9 +47,9 @@ async def predict(
             content = await ir_image.read()
             await out_file.write(content)
 
-        async with aiofiles.open(result_path, "wb") as out_file:
-            content = await result.read()
-            await out_file.write(content)
+        async with aiofiles.open(result_path, "w") as out_file:
+            await out_file.write(result)
+
 
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Exception: {err}")
