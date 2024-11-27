@@ -14,3 +14,4 @@ services:
       - ./app:/app/
       - ./images/:/images/
       - ./images-and-videos/:/images-and-videos/
+      - ./facepay-data/:/facepay-data/
