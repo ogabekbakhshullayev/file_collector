@@ -15,3 +15,4 @@ services:
       - ./images/:/images/
       - ./images-and-videos/:/images-and-videos/
       - ./facepay-data/:/facepay-data/
+      - ./3d-images/:/3d-images/

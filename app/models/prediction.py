@@ -14,6 +14,11 @@ class ResponseData(BaseModel):
     file_id: str
     detail: str
 
+class SiliconSaveResponse(BaseModel):
+    is_real: bool
+    liveness_result: dict
+    file_id: str
+
 
 class NearFarFacemeshSaveRequest(BaseModel):
     near_image: Annotated[UploadFile, "image/jpg"] = File(...)

@@ -95,3 +95,4 @@ target/
 *.json
 
 facepay-data/*
+./3d-images/*
