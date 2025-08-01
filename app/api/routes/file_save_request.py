@@ -12,10 +12,10 @@ router = APIRouter()
 
 @router.post("/file-save-request", response_model=ResponseData)
 async def predict(
-    captured_image: Annotated[UploadFile, "image/jpg"] = File(...),
-    json_depth_data: Annotated[UploadFile, "application/json"] = File(...),
-    model_name: Annotated[str, Form()] = Body(...),
-    is_real: Annotated[bool, Form()] = Body(...),
+    captured_image: Annotated[UploadFile, File(description="image/jpg")],
+    json_depth_data: Annotated[UploadFile, File(description="application/json")],
+    model_name: Annotated[str, Form()],
+    is_real: Annotated[bool, Form()],
 ):
     if not json_depth_data or not captured_image:
         raise HTTPException(status_code=404, detail="Files not found!")

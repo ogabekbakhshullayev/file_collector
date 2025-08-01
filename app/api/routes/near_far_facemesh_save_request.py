@@ -11,10 +11,10 @@ router = APIRouter()
 
 @router.post("/near_far_facemesh_save_request", response_model=ResponseData)
 async def facemesh_and_image_save(
-    near_image: Annotated[UploadFile, "image/jpg"] = File(...),
-    far_image: Annotated[UploadFile, "image/jpg"] = File(...),
-    facemesh: Annotated[UploadFile, "application/json"] = File(...),
-    file_id: str = Body(...)
+    near_image: Annotated[UploadFile, File(description="image/jpg")],
+    far_image: Annotated[UploadFile, File(description="image/jpg")],
+    facemesh: Annotated[UploadFile, File(description="application/json")],
+    file_id: Annotated[str, Form()]
 ):
     if not near_image or not far_image or not facemesh:
         raise HTTPException(status_code=404, detail="Files not found!")

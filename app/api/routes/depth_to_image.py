@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.post("/depth-to-image", response_class=StreamingResponse)
 async def depth_to_image(
-    json_depth_data: Annotated[UploadFile, "application/json"] = File(...),
+    json_depth_data: Annotated[UploadFile, File(description="application/json")],
 ):
     if not json_depth_data:
         raise HTTPException(status_code=404, detail="Files not found!")
