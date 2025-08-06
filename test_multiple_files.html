@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Fraud Detection - Multiple File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        select:focus, input[type="file"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        .result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 5px solid #4CAF50;
+        }
+        .result-item.error {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+        }
+        .result-item.success {
+            border-left-color: #4CAF50;
+            background-color: #e8f5e8;
+        }
+        .filename {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .prediction {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .prediction.real {
+            color: #4CAF50;
+        }
+        .prediction.emulator {
+            color: #ff9800;
+        }
+        .prediction.suspicious {
+            color: #f44336;
+        }
+        .confidence {
+            color: #666;
+            font-size: 14px;
+        }
+        .error-message {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .summary {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .json-display {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Android Fraud Detection - Batch Testing</h1>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="modelSelect">Select ML Model:</label>
+                <select id="modelSelect" name="model_name">
+                    <option value="xgboost">XGBoost (Default)</option>
+                    <option value="random_forest">Random Forest</option>
+                    <option value="svm">Support Vector Machine</option>
+                    <option value="gradient_boosting">Gradient Boosting</option>
+                    <option value="logistic_regression">Logistic Regression</option>
+                    <option value="mock">Mock Model (for testing)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fileInput">Select Multiple JSON Files:</label>
+                <input type="file" id="fileInput" name="files" multiple accept=".json" required>
+                <div class="file-info" id="fileInfo">
+                    No files selected. Please choose one or more JSON files containing Android device metadata.
+                </div>
+            </div>
+            
+            <button type="submit" id="submitBtn">Analyze All Devices</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <p>🔄 Analyzing devices... Please wait</p>
+        </div>
+        
+        <div class="results" id="results">
+            <h2>Analysis Results</h2>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api/android-fraud';
+        
+        // File input change handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const fileInfo = document.getElementById('fileInfo');
+            
+            if (files.length === 0) {
+                fileInfo.textContent = 'No files selected. Please choose one or more JSON files containing Android device metadata.';
+            } else {
+                const fileNames = Array.from(files).map(f => f.name).join(', ');
+                fileInfo.innerHTML = `
+                    <strong>Selected ${files.length} file(s):</strong><br>
+                    ${fileNames}
+                `;
+            }
+        });
+        
+        // Form submit handler
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const files = document.getElementById('fileInput').files;
+            const modelName = document.getElementById('modelSelect').value;
+            
+            if (files.length === 0) {
+                alert('Please select at least one JSON file');
+                return;
+            }
+            
+            // Add all files to FormData
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            formData.append('model_name', modelName);
+            
+            // Show loading state
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/batch-analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                displayResults(result);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('Network error: ' + error.message);
+            } finally {
+                // Hide loading state
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+        
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+            
+            if (data.status === 'error') {
+                displayError(data.error_message || 'Unknown error occurred');
+                return;
+            }
+            
+            let html = '';
+            
+            // Summary
+            html += `
+                <div class="summary">
+                    <h3>📊 Batch Analysis Summary</h3>
+                    <p><strong>Total Files:</strong> ${data.total_files}</p>
+                    <p><strong>Model Used:</strong> ${data.model_used}</p>
+                    <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+            `;
+            
+            // Individual results
+            if (data.results && data.results.length > 0) {
+                data.results.forEach((result, index) => {
+                    const isError = result.status === 'error';
+                    const className = isError ? 'error' : 'success';
+                    
+                    html += `<div class="result-item ${className}">`;
+                    html += `<div class="filename">📁 ${result.filename}</div>`;
+                    
+                    if (isError) {
+                        html += `<div class="error-message">❌ ${result.error_message}</div>`;
+                    } else {
+                        const prediction = result.result?.prediction;
+                        const confidence = result.result?.confidence;
+                        const predictionClass = prediction === 'real_device' ? 'real' : 
+                                              prediction === 'emulator' ? 'emulator' : 'suspicious';
+                        
+                        html += `
+                            <div class="prediction ${predictionClass}">
+                                ${prediction === 'real_device' ? '✅ Real Device' : 
+                                  prediction === 'emulator' ? '⚠️ Emulator Detected' : 
+                                  '🚨 Suspicious Device'}
+                            </div>
+                        `;
+                        
+                        if (confidence !== undefined) {
+                            html += `<div class="confidence">Confidence: ${(confidence * 100).toFixed(1)}%</div>`;
+                        }
+                        
+                        // Show additional details
+                        if (result.result?.details) {
+                            html += '<div class="json-display">';
+                            html += '<strong>Analysis Details:</strong><br>';
+                            html += JSON.stringify(result.result.details, null, 2);
+                            html += '</div>';
+                        }
+                    }
+                    
+                    html += '</div>';
+                });
+            }
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+        
+        function displayError(errorMessage) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+            
+            contentDiv.innerHTML = `
+                <div class="result-item error">
+                    <div class="error-message">❌ Error: ${errorMessage}</div>
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

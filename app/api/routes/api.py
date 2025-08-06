@@ -9,5 +9,5 @@ router.include_router(near_far_facemesh_save_request.router, tags=["near-far-fac
 router.include_router(video_and_facemesh_save_request.router, tags=["video-facemesh"], prefix="/v1")
 router.include_router(rgb_ir_landmark_bbox_save_request.router, tags=["rgb-ir-landmark-bbox"], prefix="/v1")
 router.include_router(silicon_save_request.router, tags=["silicon"], prefix="/v1")
-router.include_router(android_fraud_detection.router, tags=["android-fraud-detection"], prefix="/v1")
+router.include_router(android_fraud_detection.router, tags=["android-fraud-detection"], prefix="/v1/android-fraud-detection")
 router.include_router(healthcheck.router, tags=["healthcheck"], prefix="/v1")

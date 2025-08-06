@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Fraud Detection - Multiple File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 95%;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .results {
+            width: 100%;
+        }
+        .results-table {
+            width: 100%;
+            min-width: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        select:focus, input[type="file"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        .result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 5px solid #4CAF50;
+        }
+        .result-item.error {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+        }
+        .result-item.success {
+            border-left-color: #4CAF50;
+            background-color: #e8f5e8;
+        }
+        .filename {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .prediction {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .prediction.real {
+            color: #4CAF50;
+        }
+        .prediction.emulator {
+            color: #ff9800;
+        }
+        .prediction.suspicious {
+            color: #f44336;
+        }
+        .confidence {
+            color: #666;
+            font-size: 14px;
+        }
+        .error-message {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .summary {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .json-display {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .file-hover {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            padding: 2px 6px;
+            background-color: #e8f4fd;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+        .file-hover:hover {
+            background-color: #d0e8ff;
+            transform: scale(1.02);
+        }
+        .tooltip {
+            visibility: hidden;
+            width: 500px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 15px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -250px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+        .file-hover:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+        #modelSelectContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .model-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .model-checkbox:hover {
+            background-color: #e9ecef;
+        }
+        .model-checkbox input {
+            margin-right: 8px;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+            table-layout: fixed;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+        .results-table th:first-child,
+        .results-table td:first-child {
+            width: 200px;
+            min-width: 200px;
+        }
+        .results-table th:not(:first-child),
+        .results-table td:not(:first-child) {
+            width: auto;
+            text-align: center;
+        }
+        .results-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .results-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .confidence-cell {
+            text-align: center;
+            min-width: 80px;
+        }
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .prediction-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 70px;
+            display: inline-block;
+        }
+        .badge-real { background-color: #d4edda; color: #155724; }
+        .badge-emulator { background-color: #fff3cd; color: #856404; }
+        .badge-suspicious { background-color: #f8d7da; color: #721c24; }
+        .badge-error { background-color: #f5c6cb; color: #721c24; }
+        .reason-text {
+            font-size: 12px;
+            color: #666;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .model-comparison {
+            margin-top: 20px;
+        }
+        .compact-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+        }
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 98%;
+                padding: 40px;
+            }
+            .results-table {
+                font-size: 15px;
+            }
+            .results-table th,
+            .results-table td {
+                padding: 15px 10px;
+            }
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+                max-width: calc(100% - 20px);
+            }
+            .results-table {
+                font-size: 12px;
+            }
+            .tooltip {
+                width: 300px;
+                margin-left: -150px;
+            }
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .result-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        .model-badge {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .file-hover {
+            transition: all 0.3s ease;
+        }
+        .file-hover:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Android Fraud Detection - Multi-Model Analysis</h1>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="modelSelect">Select ML Models:</label>
+                <div id="modelSelectContainer">
+                    <label class="model-checkbox"><input type="checkbox" value="xgboost" checked> XGBoost</label>
+                    <label class="model-checkbox"><input type="checkbox" value="random_forest"> Random Forest</label>
+                    <label class="model-checkbox"><input type="checkbox" value="svm"> SVM</label>
+                    <label class="model-checkbox"><input type="checkbox" value="gradient_boosting"> Gradient Boosting</label>
+                    <label class="model-checkbox"><input type="checkbox" value="logistic_regression"> Logistic Regression</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="fileInput">Select JSON Files:</label>
+                <input type="file" id="fileInput" name="files" multiple accept=".json" required>
+                <div class="file-info" id="fileInfo">
+                    No files selected
+                </div>
+            </div>
+            
+            <button type="submit" id="submitBtn">Analyze Devices</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <p>🤖 Running AI Analysis...</p>
+            <div class="progress-bar" style="margin: 10px auto; width: 200px;">
+                <div class="progress-fill" style="width: 100%; animation: pulse 1.5s ease-in-out infinite;"></div>
+            </div>
+        </div>
+        
+        <div class="results" id="results">
+            <h2>Analysis Results</h2>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/v1/android-fraud-detection';
+        
+        // Store file contents and results for tooltip display
+        let fileContents = new Map();
+        let fileResults = new Map();
+        
+        // File input change handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const fileInfo = document.getElementById('fileInfo');
+            
+            // Clear previous file contents and results
+            fileContents.clear();
+            fileResults.clear();
+            
+            if (files.length === 0) {
+                fileInfo.textContent = 'No files selected';
+            } else {
+                // Read file contents for tooltips
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const content = JSON.parse(e.target.result);
+                            fileContents.set(file.name, JSON.stringify(content, null, 2));
+                        } catch (error) {
+                            fileContents.set(file.name, 'Invalid JSON file');
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+                
+                fileInfo.textContent = `${files.length} file(s) selected`;
+            }
+        });
+        
+        // Form submit handler
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const files = document.getElementById('fileInput').files;
+            const selectedModels = Array.from(document.querySelectorAll('#modelSelectContainer input:checked')).map(cb => cb.value);
+            
+            if (files.length === 0) {
+                alert('Please select at least one JSON file');
+                return;
+            }
+            
+            if (selectedModels.length === 0) {
+                alert('Please select at least one ML model');
+                return;
+            }
+            
+            // Clear previous results and show loading state
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Analyzing...';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            try {
+                // Analyze with each selected model
+                const allResults = {};
+                
+                for (const modelName of selectedModels) {
+                    const formData = new FormData();
+                    
+                    // Add all files to FormData
+                    for (let i = 0; i < files.length; i++) {
+                        formData.append('files', files[i]);
+                    }
+                    formData.append('model_name', modelName);
+                    
+                    const response = await fetch(`${API_BASE_URL}/batch-analyze`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    allResults[modelName] = result;
+                    
+                    // Store results for tooltips
+                    if (result.results) {
+                        result.results.forEach(fileResult => {
+                            if (!fileResults.has(fileResult.filename)) {
+                                fileResults.set(fileResult.filename, {});
+                            }
+                            fileResults.get(fileResult.filename)[modelName] = fileResult;
+                        });
+                    }
+                }
+                
+                displayMultiModelResults(allResults, selectedModels);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('Network error: ' + error.message);
+            } finally {
+                // Hide loading state
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').textContent = 'Analyze Devices';
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+        
+        function displayMultiModelResults(allResults, selectedModels) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+            
+            // Calculate overall statistics
+            const totalFiles = Object.values(allResults)[0]?.total_files || 0;
+            let successCount = 0;
+            let errorCount = 0;
+            
+            // Get file list from first model
+            const firstModelResults = Object.values(allResults)[0]?.results || [];
+            const fileNames = firstModelResults.map(r => r.filename);
+            
+            // Count successes across all models
+            selectedModels.forEach(model => {
+                const modelResults = allResults[model]?.results || [];
+                successCount += modelResults.filter(r => r.status === 'success').length;
+                errorCount += modelResults.filter(r => r.status === 'error').length;
+            });
+            
+            let html = `
+                <div class="compact-summary">
+                    <div class="summary-item">
+                        <div class="summary-number">${totalFiles}</div>
+                        <div class="summary-label">Files</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-number">${selectedModels.length}</div>
+                        <div class="summary-label">Models</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-number">${successCount}</div>
+                        <div class="summary-label">Success</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-number">${errorCount}</div>
+                        <div class="summary-label">Errors</div>
+                    </div>
+                </div>
+                
+                <div class="model-comparison">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+            `;
+            
+            // Add columns for each model
+            selectedModels.forEach(model => {
+                html += `<th>${model.toUpperCase()}</th>`;
+            });
+            
+            html += `
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            // Add rows for each file
+            fileNames.forEach(fileName => {
+                const resultData = fileResults.get(fileName) || {};
+                const resultJson = Object.keys(resultData).length > 0 ? 
+                    JSON.stringify(resultData, null, 2) : 'No results available';
+                
+                html += `
+                    <tr>
+                        <td>
+                            <span class="file-hover">
+                                ${fileName}
+                                <span class="tooltip">${resultJson}</span>
+                            </span>
+                        </td>
+                `;
+                
+                // Add result for each model
+                selectedModels.forEach(model => {
+                    const modelResults = allResults[model]?.results || [];
+                    const fileResult = modelResults.find(r => r.filename === fileName);
+                    
+                    html += '<td>';
+                    
+                    if (fileResult && fileResult.status === 'success') {
+                        const prediction = fileResult.result?.prediction;
+                        const confidence = fileResult.result?.confidence;
+                        const reason = getDetectionReason(fileResult.result);
+                        
+                        const badgeClass = prediction === 'real' ? 'badge-real' : 
+                                          prediction === 'emulator' ? 'badge-emulator' : 'badge-suspicious';
+                        
+                        const icon = prediction === 'real' ? '✅' : 
+                                    prediction === 'emulator' ? '⚠️' : '🚨';
+                        
+                        html += `
+                            <div class="prediction-badge ${badgeClass}">
+                                ${icon} ${prediction === 'real' ? 'Real' : 
+                                          prediction === 'emulator' ? 'Emulator' : 'Suspicious'}
+                            </div>
+                        `;
+                        
+                        if (confidence !== undefined) {
+                            const confidencePercent = (confidence * 100).toFixed(0);
+                            const confidenceColor = confidence > 0.8 ? '#28a745' : 
+                                                   confidence > 0.6 ? '#ffc107' : '#dc3545';
+                            html += `
+                                <div class="confidence-cell">
+                                    <div>${confidencePercent}%</div>
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill" style="width: ${confidencePercent}%; background-color: ${confidenceColor};"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        if (reason) {
+                            html += `<div class="reason-text" title="${reason}">${reason}</div>`;
+                        }
+                        
+                    } else if (fileResult && fileResult.status === 'error') {
+                        html += `
+                            <div class="prediction-badge badge-error">
+                                ❌ Error
+                            </div>
+                            <div class="reason-text">${fileResult.error_message}</div>
+                        `;
+                    } else {
+                        html += '<div class="prediction-badge badge-error">❌ No Result</div>';
+                    }
+                    
+                    html += '</td>';
+                });
+                
+                html += '</tr>';
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+        
+        function getDetectionReason(result) {
+            if (!result || !result.details) return '';
+            
+            const prediction = result.prediction;
+            const details = result.details;
+            
+            // Generate concise reason based on prediction
+            if (prediction === 'real') {
+                return 'Hardware signature authentic';
+            } else if (prediction === 'emulator') {
+                return 'Emulator characteristics detected';
+            } else {
+                return 'Anomalous device properties';
+            }
+        }
+        
+        function displayError(errorMessage) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+            
+            contentDiv.innerHTML = `
+                <div class="result-item error">
+                    <div class="error-message">❌ Error: ${errorMessage}</div>
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
