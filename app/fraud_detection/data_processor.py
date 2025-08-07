@@ -314,8 +314,16 @@ class AndroidDeviceFeatureExtractor:
         """Extract hardware and system features"""
         feature_dict = {}
         
-        # Extract feature names
-        feature_names = [f.get('name', '') for f in features_list]
+        # Extract feature names - handle both dict and string formats
+        feature_names = []
+        for f in features_list:
+            if isinstance(f, dict):
+                feature_names.append(f.get('name', ''))
+            elif isinstance(f, str):
+                feature_names.append(f)
+            else:
+                # Skip non-dict, non-string items
+                continue
         
         # Count important feature categories
         feature_dict['num_hardware_features'] = len(feature_names)
@@ -390,7 +398,16 @@ class AndroidDeviceFeatureExtractor:
                 'emulator_app_score': 0.0
             }
         
-        package_names = [pkg.get('name', '') for pkg in packages]
+        # Extract package names - handle both dict and string formats
+        package_names = []
+        for pkg in packages:
+            if isinstance(pkg, dict):
+                package_names.append(pkg.get('name', ''))
+            elif isinstance(pkg, str):
+                package_names.append(pkg)
+            else:
+                continue
+                
         features['num_installed_packages'] = len(package_names)
         
         # Google apps analysis

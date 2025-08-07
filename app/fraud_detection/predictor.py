@@ -282,85 +282,76 @@ class FraudDetectionPredictor:
         start_time = time.time()
         
         try:
-            # Extract features
+            # Extract features using the same feature extractor as training
             features = self.feature_extractor.extract_all_features(json_data)
             
-            if not ML_AVAILABLE or not self.model:
-                # Use simple heuristic when ML libraries are not available
-                return self._simple_heuristic_prediction(features, start_time)
+            # Convert to DataFrame with proper feature names
+            # Get the expected feature names from the training pipeline
+            expected_features = [
+                'num_cameras', 'max_resolution_width', 'max_resolution_height',
+                'avg_resolution_ratio', 'resolution_variety_score', 'unique_formats',
+                'num_cpu_cores', 'cpu_model_consistency', 'cpu_arch_score',
+                'hardware_emulator_score', 'build_fingerprint_score', 'ro_secure',
+                'ro_debuggable', 'build_type_score', 'num_hardware_features',
+                'num_camera_features', 'num_sensor_features', 'num_telephony_features',
+                'num_bluetooth_features', 'num_google_features', 'num_samsung_features',
+                'kernel_version_score', 'num_installed_packages', 'google_apps_ratio',
+                'system_apps_ratio', 'emulator_app_score', 'num_mount_points',
+                'virtual_fs_score', 'emulator_likelihood_score'
+            ]
             
-            # Convert to DataFrame with error handling
-            try:
-                df = pd.DataFrame([features])
-                
-                # Prepare features (same as training pipeline)
-                feature_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-                feature_cols = [col for col in feature_cols if col not in ['filename', 'device_type']]
-                
-                X = df[feature_cols].copy()
-                X = X.fillna(0)
-                
-                # Handle numpy compatibility issues
-                try:
-                    X = X.replace([np.inf, -np.inf], 0)
-                except (AttributeError, TypeError):
-                    # Fallback for numpy compatibility issues
-                    X = X.replace([float('inf'), float('-inf')], 0)
-                
-            except (ImportError, AttributeError, ModuleNotFoundError) as e:
-                if 'numpy._core' in str(e) or '_core' in str(e):
-                    logger.warning(f"Numpy compatibility issue in prediction: {str(e)}. Using heuristic prediction.")
-                    return self._simple_heuristic_prediction(features, start_time)
-                else:
-                    raise
+            # Create DataFrame with expected feature names
+            df = pd.DataFrame([features])
+            
+            # Ensure we have all expected features in the correct order
+            for feature in expected_features:
+                if feature not in df.columns:
+                    df[feature] = 0
+            
+            # Select and order features as expected by the model
+            X = df[expected_features].copy()
+            X = X.fillna(0)
+            X = X.replace([np.inf, -np.inf], 0)
             
             # Apply feature selection if available
             if self.feature_selector:
                 try:
-                    X = pd.DataFrame(
-                        self.feature_selector['selector'].transform(X),
-                        columns=self.feature_selector['selected_features']
-                    )
-                except (ImportError, AttributeError, ModuleNotFoundError) as e:
-                    if 'numpy._core' in str(e) or '_core' in str(e):
-                        logger.warning(f"Numpy compatibility issue in feature selection: {str(e)}. Skipping feature selection.")
-                        # Continue without feature selection
+                    X_selected = self.feature_selector.transform(X)
+                    # Use the stored selected feature names if available
+                    if hasattr(self, 'selected_features') and self.selected_features:
+                        X = pd.DataFrame(X_selected, columns=self.selected_features)
                     else:
-                        raise
+                        # Fallback: try to get feature names from selector
+                        if hasattr(self.feature_selector, 'get_support'):
+                            selected_mask = self.feature_selector.get_support()
+                            selected_feature_names = [name for name, selected in zip(expected_features, selected_mask) if selected]
+                            X = pd.DataFrame(X_selected, columns=selected_feature_names)
+                        else:
+                            X = pd.DataFrame(X_selected)
+                except Exception as e:
+                    print(f"Warning: Feature selection failed: {e}")
+                    # Continue without feature selection
             
             # Apply scaling if available
             if self.scaler:
                 try:
-                    X = pd.DataFrame(
-                        self.scaler.transform(X),
-                        columns=X.columns
-                    )
-                except (ImportError, AttributeError, ModuleNotFoundError) as e:
-                    if 'numpy._core' in str(e) or '_core' in str(e):
-                        logger.warning(f"Numpy compatibility issue in scaling: {str(e)}. Skipping scaling.")
-                        # Continue without scaling
-                    else:
-                        raise
+                    X_scaled = self.scaler.transform(X)
+                    X = pd.DataFrame(X_scaled, columns=X.columns)
+                except Exception as e:
+                    print(f"Warning: Scaling failed: {e}")
+                    # Continue without scaling
             
-            # Make prediction with error handling
-            try:
-                prediction = self.model.predict(X)[0]
-                
-                # Get prediction probability if available
-                if hasattr(self.model, 'predict_proba'):
-                    probabilities = self.model.predict_proba(X)[0]
-                    real_confidence = probabilities[0]
-                    emulator_confidence = probabilities[1]
-                else:
-                    real_confidence = 1.0 - prediction
-                    emulator_confidence = float(prediction)
-                    
-            except (ImportError, AttributeError, ModuleNotFoundError) as e:
-                if 'numpy._core' in str(e) or '_core' in str(e):
-                    logger.warning(f"Numpy compatibility issue in model prediction: {str(e)}. Using heuristic prediction.")
-                    return self._simple_heuristic_prediction(features, start_time)
-                else:
-                    raise
+            # Make prediction
+            prediction = self.model.predict(X)[0]
+            
+            # Get prediction probability if available
+            if hasattr(self.model, 'predict_proba'):
+                probabilities = self.model.predict_proba(X)[0]
+                real_confidence = probabilities[0]
+                emulator_confidence = probabilities[1]
+            else:
+                real_confidence = 1.0 - prediction
+                emulator_confidence = float(prediction)
             
             processing_time = time.time() - start_time
             
@@ -385,17 +376,29 @@ class FraudDetectionPredictor:
             return result
             
         except Exception as e:
-            logger.error(f"Error in prediction: {str(e)}")
+            print(f"Error in prediction: {e}")
             processing_time = time.time() - start_time
             return {
                 'prediction': 'error',
                 'error': str(e),
                 'processing_time_ms': round(processing_time * 1000, 2),
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+                'model_used': self.model_name,
+                'analysis': {'hardware_indicators': {}, 'risk_factors': [], 'confidence_factors': []}
             }
     
     def _simple_heuristic_prediction(self, features: Dict[str, Any], start_time: float) -> Dict[str, Any]:
         """Simple heuristic prediction when ML libraries are not available"""
+        
+        # Validate features input
+        if not isinstance(features, dict):
+            logger.error(f"features is not a dict in _simple_heuristic_prediction: {type(features)}, value: {features}")
+            processing_time = time.time() - start_time
+            return {
+                'prediction': 'error',
+                'error': f'Invalid features data type: {type(features)}',
+                'processing_time_ms': round(processing_time * 1000, 2),
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }
         
         # Simple scoring based on common emulator indicators
         emulator_score = 0.0
@@ -450,6 +453,16 @@ class FraudDetectionPredictor:
     
     def _analyze_device_characteristics(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """Provide detailed analysis of device characteristics"""
+        
+        # Validate features input
+        if not isinstance(features, dict):
+            logger.error(f"features is not a dict in _analyze_device_characteristics: {type(features)}, value: {features}")
+            return {
+                'hardware_indicators': {'error': 'Invalid features data'},
+                'system_indicators': {'error': 'Invalid features data'},
+                'risk_factors': ['Unable to analyze due to invalid data'],
+                'confidence_factors': []
+            }
         
         analysis = {
             'hardware_indicators': {},
@@ -525,7 +538,25 @@ class ProductionAPI:
         """
         
         try:
+            # Validate input
+            if not isinstance(device_metadata, dict):
+                logger.error(f"device_metadata is not a dict: {type(device_metadata)}, value: {device_metadata}")
+                return {
+                    'status': 'error',
+                    'error_message': f'Invalid input: expected dictionary, got {type(device_metadata).__name__}',
+                    'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            
             result = self.predictor.predict_single_device(device_metadata)
+            
+            # Ensure result is a dictionary
+            if not isinstance(result, dict):
+                logger.error(f"predict_single_device returned non-dict type: {type(result)}, value: {result}")
+                return {
+                    'status': 'error',
+                    'error_message': f'Internal error: invalid result type {type(result)}',
+                    'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+                }
             
             if result.get('prediction') == 'error':
                 return {
