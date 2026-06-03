@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.api import router as api_router
 from core.events import create_start_app_handler
@@ -9,6 +10,15 @@ from core.config import API_PREFIX, DEBUG, PROJECT_NAME, VERSION
 
 def get_application() -> FastAPI:
     application = FastAPI(title=PROJECT_NAME, debug=DEBUG, version=VERSION)
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     application.include_router(api_router, prefix=API_PREFIX)
     
     # Add static files serving for test interface

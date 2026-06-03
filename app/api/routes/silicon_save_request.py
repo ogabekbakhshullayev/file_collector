@@ -10,7 +10,7 @@ import base64
 
 router = APIRouter()
 
-vision_url = "http://213.230.069.228:31888/api/v1/detect-liveness"
+vision_url = "http://213.230.69.228:31888/api/v1/detect-liveness"
 
 
 def base64_2_bytestr(image_str: str):

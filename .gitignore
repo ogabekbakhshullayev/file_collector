@@ -94,5 +94,13 @@ target/
 *.jpg
 *.json
 
-facepay-data/*
-./3d-images/*
+# Image and data storage folders
+facepay-data/
+3d-images/
+images/
+images-and-videos/
+color-images/
+far_03_04_near_08_1_thresholds_200_real_200_spoof/
+images-and-videos-backup-*/
+images-and-videos-1K-backup-*/
+*.zip

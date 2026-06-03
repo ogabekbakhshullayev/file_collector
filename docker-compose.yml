@@ -9,10 +9,17 @@ services:
       - "8080:8080"
     env_file:
       - .env
-    command: uvicorn main:app --reload --host 0.0.0.0 --port 8080
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2 --timeout-keep-alive 120 --limit-max-requests 1000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     volumes:
       - ./app:/app/
       - ./images/:/images/
       - ./images-and-videos/:/images-and-videos/
       - ./facepay-data/:/facepay-data/
       - ./3d-images/:/3d-images/
+      - ./color-images/:/color-images/
