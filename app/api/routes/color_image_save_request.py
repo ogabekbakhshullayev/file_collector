@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import aiofiles
 import asyncio
 import base64
+import gzip
 import json
 import os
 from datetime import datetime, timezone
@@ -49,10 +50,24 @@ async def save_color_images(request: Request):
     if not body:
         raise HTTPException(status_code=400, detail="Empty body")
 
+    content_encoding = request.headers.get("content-encoding", "").lower()
+    if content_encoding == "gzip":
+        try:
+            body = gzip.decompress(body)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Failed to decompress gzip body: {e}")
+
     try:
-        items_data = json.loads(body)
+        payload = json.loads(body)
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=422, detail=f"Invalid JSON: {e}")
+
+    if isinstance(payload, dict):
+        device_name = payload.get("device_name")
+        items_data = payload.get("items")
+    else:
+        device_name = None
+        items_data = payload
 
     if not isinstance(items_data, list) or len(items_data) == 0:
         raise HTTPException(status_code=400, detail="Expected non-empty list")
@@ -83,6 +98,7 @@ async def save_color_images(request: Request):
 
         meta = {
             "timestamp": timestamp,
+            "device_name": device_name,
             "total_images": len(decoded),
             "colors": list(color_counts.keys()),
             "files": saved_files,
