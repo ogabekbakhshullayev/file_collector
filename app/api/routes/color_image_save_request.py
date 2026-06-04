@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 import aiofiles
 import asyncio
 import base64
 import gzip
+import io
 import json
 import os
+import zipfile
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
@@ -78,6 +80,70 @@ async def save_color_images(request: Request):
         decoded = await loop.run_in_executor(_executor, _decode_all, items_data)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Failed to decode images: {e}")
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")[:-3]
+    session_dir = os.path.join(SAVE_DIR, timestamp)
+
+    try:
+        os.makedirs(session_dir, exist_ok=True)
+
+        color_counts: dict[str, int] = {}
+        tasks = []
+        saved_files = []
+
+        for color, image_bytes in decoded:
+            count = color_counts.get(color, 0)
+            color_counts[color] = count + 1
+            filename = f"{color}.jpeg" if count == 0 else f"{color}_{count}.jpeg"
+            saved_files.append(filename)
+            tasks.append(_write_file(os.path.join(session_dir, filename), image_bytes))
+
+        meta = {
+            "timestamp": timestamp,
+            "device_name": device_name,
+            "total_images": len(decoded),
+            "colors": list(color_counts.keys()),
+            "files": saved_files,
+        }
+        tasks.append(_write_file(
+            os.path.join(session_dir, "request.json"),
+            json.dumps(meta, ensure_ascii=False, indent=2).encode()
+        ))
+
+        await asyncio.gather(*tasks)
+
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save: {e}")
+
+    return {"session": timestamp, "colors": list(color_counts.keys()), "total_images": len(decoded)}
+
+
+@router.post("/color-image-save/zip")
+@router.post("/color-image-save/zip/", include_in_schema=False)
+async def save_color_images_zip(
+    device_name: str = None,
+    file: UploadFile = File(..., description="ZIP file containing JPEG images named image_<color>.jpeg"),
+):
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=422, detail="Invalid ZIP file")
+
+    decoded: list[tuple[str, bytes]] = []
+    for name in zf.namelist():
+        lower = name.lower()
+        if not lower.endswith((".jpeg", ".jpg")):
+            continue
+        basename = os.path.basename(lower)
+        color = basename.removeprefix("image_").removesuffix(".jpeg").removesuffix(".jpg")
+        decoded.append((color, zf.read(name)))
+
+    if not decoded:
+        raise HTTPException(status_code=400, detail="No JPEG images found in ZIP")
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")[:-3]
     session_dir = os.path.join(SAVE_DIR, timestamp)
